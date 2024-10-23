@@ -30,6 +30,7 @@ def google_drive_api():
       creds.refresh(Request())
     else:
       credentials_json = os.getenv('gdrive_credentials')
+      st.write('credentials_json:', credentials_json)
       if credentials_json:
         credentials_dict = json.loads(credentials_json)
         creds = Credentials.from_authorized_user_info(credentials_dict, SCOPES)
