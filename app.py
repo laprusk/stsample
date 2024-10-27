@@ -15,10 +15,10 @@ file_name = None
 def get_credentials():
     credentials_json = os.getenv("GOOGLE_CREDENTIALS")
     if credentials_json is not None:
-        st.write("Using credentials from GOOGLE_CREDENTIALS environment variable.")
-        credentials_json = json.dumps(credentials_json)
-        credentials_dict = json.loads(credentials_json)
-        return Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
+        # 内容をJSONファイルとして保存
+        with open("credentials.json", "w") as f:
+            f.write(credentials_json)
+        return Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
     elif os.path.exists("credentials.json"):
         return Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
     
