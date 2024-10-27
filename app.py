@@ -1,110 +1,52 @@
 import streamlit as st
-import time
 import os
-import os.path
-import json
+import glob
 from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
-def get_credentials():
-    """認証情報を取得する関数"""
-    creds = None
-    
-    # セッションステートからトークンを取得
-    if 'token' in st.session_state:
-        creds = Credentials.from_authorized_user_info(st.session_state['token'], SCOPES)
-    
-    # 認証情報が無効な場合の処理
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-            except Exception as e:
-                st.error(f"Error refreshing credentials: {e}")
-                creds = None
-        
-        # 新規認証が必要な場合
-        if not creds:
-            try:
-                credentials_json = st.secrets["gdrive_credentials"]
-                credentials_dict = json.loads(credentials_json)
-                
-                # 認証フローの作成
-                flow = InstalledAppFlow.from_client_config(credentials_dict, SCOPES)
-                
-                # 認証URLの生成
-                auth_url = flow.authorization_url()
-                
-                # 認証URLを表示
-                st.write("Please visit this URL to authorize this application:")
-                st.write(auth_url[0])
-                
-                # 認証コードの入力フィールド
-                code = st.text_input('Enter the authorization code:')
-                
-                if code:
-                    try:
-                        # 認証コードを使用してクレデンシャルを取得
-                        flow.fetch_token(code=code)
-                        creds = flow.credentials
-                        
-                        # セッションステートにトークンを保存
-                        st.session_state['token'] = json.loads(creds.to_json())
-                        st.success("Successfully authenticated!")
-                        st.experimental_rerun()
-                    except Exception as e:
-                        st.error(f"Error during authentication: {e}")
-                        return None
-                else:
-                    return None
-                
-            except Exception as e:
-                st.error(f"Authentication error: {e}")
-                return None
-    
-    return creds
+file_name = None
 
-def google_drive_api():
-    """Google Drive APIを使用してファイル一覧を取得"""
-    creds = get_credentials()
+def get_credentials():
+    credentials_json = os.getenv("GOOGLE_CREDENTIALS")
+    if credentials_json is not None:
+        return Credentials.from_service_account_info(credentials_json, scopes=SCOPES)
+    elif os.path.exists("credentials.json"):
+        return Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
     
-    if not creds:
-        st.warning("Please complete the authentication process")
+
+def download_file(file_id):
+    creds = get_credentials()
+    if creds is None:
+        st.error("GOOGLE_CREDENTIALS environment variable not set.")
         return
     
     try:
-        service = build("drive", "v3", credentials=creds)
-        
-        results = service.files().list(
-            pageSize=10,
-            fields="nextPageToken, files(id, name)"
-        ).execute()
-        
-        items = results.get("files", [])
-        
-        if not items:
-            st.write("No files found")
-            return
-            
-        st.write("Files:")
-        for item in items:
-            st.write(f"{item['name']} ({item['id']})")
-            
-    except HttpError as error:
-        st.error(f"An error occurred: {error}")
+        service = build('drive', 'v3', credentials=creds)
+        file_name = service.files().get(fileId=file_id).execute()["name"]
+        request = service.files().get_media(fileId=file_id)
+        fh = open(file_name, "wb")
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            st.write(f"Download {int(status.progress() * 100)}%.")
+        st.success("Download complete.")
+    except HttpError as e:
+        st.error(f"An error occurred: {e}")
 
-# UI部分
-st.title("Google Drive File Viewer")
 
-input_num = st.number_input('Input a number', value=0)
-result = input_num ** 2
-st.write('Result: ', result)
+st.title("Google Drive Downloader")
+file_id = st.text_input("Enter the file ID:")
+if st.button("Download"):
+    download_file(file_id)
+    st.write("Download complete.")
+    files = glob.glob("./*")
+    for f in files:
+        st.write(f)
+# st.download_button("Download the downloaded file", file_name)
 
-if st.button('Run'):
-    google_drive_api()
-    st.write('Done!')
