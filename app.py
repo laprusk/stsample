@@ -45,8 +45,9 @@ def download_file(file_id):
 
 st.title("Google Drive Downloader")
 if os.getenv("GOOGLE_CREDENTIALS") is None:
-    st.warning("GOOGLE_CREDENTIALS environment variable not set.")
-    st.stop()
+    st.write("GOOGLE_CREDENTIALS environment variable not set.")
+else:
+    st.write("GOOGLE_CREDENTIALS environment variable set.")
 file_id = st.text_input("Enter the file ID:")
 if st.button("Download"):
     download_file(file_id)
