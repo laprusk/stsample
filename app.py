@@ -15,8 +15,7 @@ file_name = None
 def get_credentials():
     credentials_json = os.getenv("GOOGLE_CREDENTIALS")
     if credentials_json is not None:
-        credentials_json = credentials_json.replace("\n", "")
-        credentials_dict = json.loads(credentials_json)
+        credentials_dict = json.loads(credentials_json, strict=False)
         return Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
     elif os.path.exists("credentials.json"):
         return Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
@@ -44,7 +43,7 @@ def download_file(file_id):
 
 
 st.title("Google Drive Downloader")
-st.write("うおおお？")
+st.write("えっ？")
 if os.getenv("GOOGLE_CREDENTIALS") is None:
     st.write("GOOGLE_CREDENTIALS environment variable not set.")
 else:
