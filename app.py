@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import json
 import glob
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
@@ -14,7 +15,8 @@ file_name = None
 def get_credentials():
     credentials_json = os.getenv("GOOGLE_CREDENTIALS")
     if credentials_json is not None:
-        return Credentials.from_service_account_info(credentials_json, scopes=SCOPES)
+        credentials_dict = json.loads(credentials_json)
+        return Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
     elif os.path.exists("credentials.json"):
         return Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
     
