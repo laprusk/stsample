@@ -1,6 +1,5 @@
 .venv
 token*
 credentials.json
-*.csv
 test.py
 output.csv
